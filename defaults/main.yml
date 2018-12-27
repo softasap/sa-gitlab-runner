@@ -1,0 +1,24 @@
+---
+# defaults file for sa-gitlab-runner
+
+# Maximum number of jobs to run concurrently
+gitlab_runner_concurrent: '{{ ansible_processor_cores }}'
+
+# GitLab coordinator URL
+gitlab_runner_coordinator_url: 'https://gitlab.com/ci'
+# GitLab registration token
+gitlab_runner_registration_token: ''
+# Runner description
+gitlab_runner_description: '{{ ansible_hostname }}'
+# Runner executor
+gitlab_runner_executor: 'shell' # docker
+# Default Docker image
+gitlab_runner_docker_image: ''
+# Runner tags
+gitlab_runner_tags: []
+
+  config_toml_base_properties:
+    - {regexp: "^concurrent =.*", line: "concurrent = {{ gitlab_runner_concurrent }}"}
+
+  config_toml_extra_properties: []
+#    - {regexp: "^#* *max_connect_errors", line: "max_connect_errors = 4294967295", insertafter: '\[mysqld\]'}
