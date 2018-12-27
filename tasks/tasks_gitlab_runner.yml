@@ -4,33 +4,42 @@
 
     - name: GITLAB Runner | Key
       apt_key:  url=https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey state=present
+      retries: 3
+      register: result
+      until: result is not failed
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
     - name: GITLAB Runner |  Dependencies
       apt: name='{{ item }}' state=present
+      retries: 3
+      register: result
+      until: result is not failed
       with_items:
         - apt-transport-https
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
     - name: GITLAB Runner | Apt repo
       apt_repository:
-        repo: > 
+        repo: >
           deb https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ ansible_distribution | lower }}/
           {{ ansible_distribution_release }} main
         state: present
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
-    - name: GITLAB Runner | Install 
+    - name: GITLAB Runner | Install
       apt: name=gitlab-ci-multi-runner state=present update_cache=yes
+      retries: 3
+      register: result
+      until: result is not failed
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
   when: ansible_os_family == 'Debian'
 
@@ -38,27 +47,33 @@
 
     - name: GITLAB Runner | Install GitLab GPG key
       rpm_key: key=https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey state=present
+      retries: 3
+      register: result
+      until: result is not failed
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
     - name: GITLAB Runner | Install dependencies
       yum: name='{{ item }}' state=present
+      retries: 3
+      register: result
+      until: result is not failed
       with_items:
         - pygpgme
         - yum-utils
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
     - name: GITLAB Runner | template rpm repo
       uri:
-        url: "{{yum_repo_config_url}}"
+        url: "{{ yum_repo_config_url }}"
         method: GET
         return_content: yes
         status_code: 200
       register: repo_content
-      tags: 
+      tags:
         - gitlab
 
     - debug: var="repo_content"
@@ -66,13 +81,13 @@
     # - name: Gitlab Runner | store repo
     #   copy: content="{{ repo_content.content }}" dest=/etc/yum.repos.d/runner_gitlab.repo
     #   become: yes
-    #   tags: 
+    #   tags:
     #     - gitlab
 
     # - name: Gitlab Runner | chore - do not validate gpgatm
     #   command: "sed -i'' 's/repo_gpgcheck=1/repo_gpgcheck=0/' /etc/yum.repos.d/runner_gitlab.repo"
     #   become: yes
-    #   tags: 
+    #   tags:
     #     - gitlab
 
     - name: Preset fact
@@ -98,7 +113,9 @@
         sslcacert: /etc/pki/tls/certs/ca-bundle.crt
         metadata_expire: 300
         file: runner_gitlab.repo
-      become: yes  
+      become: yes
+      tags:
+        - skip_ansible_lint
 
     - name: GITLAB Runner | template rpm source repo (2/2)
       yum_repository:
@@ -106,20 +123,23 @@
         description: runner_gitlab-ci-multi-runner-source
         baseurl: "https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ yum_distribution | lower }}/{{ ansible_distribution_major_version }}/SRPMS"
         repo_gpgcheck: no
-        gpgcheck: no        
+        gpgcheck: no
         enabled: yes
         gpgkey: "https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey"
         sslverify: yes
         sslcacert: /etc/pki/tls/certs/ca-bundle.crt
         metadata_expire: 300
         file: runner_gitlab.repo
-      become: yes        
+      become: yes
 
     - name: GITLAB Runner | Install GitLab Runner
       yum: name=gitlab-ci-multi-runner state=present update_cache=yes
+      retries: 3
+      register: result
+      until: result is not failed
       become: yes
-      tags: 
-        - gitlab  
+      tags:
+        - gitlab
 
   when: ansible_os_family == 'RedHat'
 
@@ -139,8 +159,8 @@
     insertafter: "{{ item.insertafter | default('EOF') }}"
   with_items: "{{ config_toml_base_properties | default([]) }}"
   become: yes
-  tags: 
-    - gitlab  
+  tags:
+    - gitlab
 
 - name: GITLAB Runner | Tune config (extra)
   lineinfile:
@@ -150,8 +170,8 @@
     insertafter: "{{ item.insertafter | default('EOF') }}"
   with_items: "{{ config_toml_extra_properties | default([]) }}"
   become: yes
-  tags: 
-    - gitlab  
+  tags:
+    - gitlab
 
 
 - name: Register runner to GitLab
@@ -163,5 +183,5 @@
     --tag-list '{{ gitlab_runner_tags | join(",") }}'
     --executor '{{ gitlab_runner_executor }}'
     --docker-image '{{ gitlab_runner_docker_image }}'
-  when: registered_runners.stderr.find('\n'+gitlab_runner_description) == -1 and gitlab_runner_registration_token != ""
-  become: yes  
+  when: registered_runners.stderr.find('\n'+gitlab_runner_description) == -1 and gitlab_runner_registration_token
+  become: yes
