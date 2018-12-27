@@ -11,7 +11,8 @@ Simple
 ```YAML
 
      - {
-         role: "sa-gitlab-runner"
+         role: "sa-gitlab-runner",
+         gitlab_runner_registration_token: 'xxx-yyyy'
        }
 
 
@@ -20,12 +21,24 @@ Simple
 Advanced
 
 ```YAML
-
+vars:
+  - custom_config_toml_properties:
+roles:  
      - {
-         role: "sa-gitlab-runner"
+         role: "sa-gitlab-runner",
+         # GitLab coordinator URL
+         gitlab_runner_coordinator_url: 'https://gitlab.com/ci',
+         # GitLab registration token
+         gitlab_runner_registration_token: 'xxx-yyyy',
+         # Runner description
+         gitlab_runner_description: 'Some runner desc',
+         # Runner executor
+         gitlab_runner_executor: 'shell', # docker
+         # Default Docker image
+         gitlab_runner_docker_image: 'someimage',
+         # Runner tags
+         gitlab_runner_tags: ['node', 'ruby', 'mysql']         
        }
-
-
 ```
 
 
