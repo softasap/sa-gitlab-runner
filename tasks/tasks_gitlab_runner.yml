@@ -3,7 +3,7 @@
 - block:
 
     - name: GITLAB Runner | Key
-      apt_key:  url=https://packages.gitlab.com/gpg.key state=present
+      apt_key:  url=https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey state=present
       become: yes
       tags: 
         - gitlab  
@@ -20,7 +20,7 @@
       apt_repository:
         repo: > 
           deb https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ ansible_distribution | lower }}/
-          {{ ansible_distribution_major_version }} main
+          {{ ansible_distribution_release }} main
         state: present
       become: yes
       tags: 
@@ -37,7 +37,7 @@
 - block:
 
     - name: GITLAB Runner | Install GitLab GPG key
-      rpm_key: key=https://packages.gitlab.com/gpg.key state=present
+      rpm_key: key=https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey state=present
       become: yes
       tags: 
         - gitlab  
@@ -51,12 +51,69 @@
       tags: 
         - gitlab  
 
-    - name: GITLAB Runner | rpm repo
-      template: src=templates/runner_gitlab.repo.j2 dest=/etc/yum.repos.d/runner_gitlab.repo
-      become: yes
+    - name: GITLAB Runner | template rpm repo
+      uri:
+        url: "{{yum_repo_config_url}}"
+        method: GET
+        return_content: yes
+        status_code: 200
+      register: repo_content
       tags: 
-        - gitlab  
+        - gitlab
 
+    - debug: var="repo_content"
+
+    # - name: Gitlab Runner | store repo
+    #   copy: content="{{ repo_content.content }}" dest=/etc/yum.repos.d/runner_gitlab.repo
+    #   become: yes
+    #   tags: 
+    #     - gitlab
+
+    # - name: Gitlab Runner | chore - do not validate gpgatm
+    #   command: "sed -i'' 's/repo_gpgcheck=1/repo_gpgcheck=0/' /etc/yum.repos.d/runner_gitlab.repo"
+    #   become: yes
+    #   tags: 
+    #     - gitlab
+
+    - name: Preset fact
+      set_fact:
+        yum_distribution: "{{ ansible_distribution | lower }}"
+
+    - name: Preset fact
+      set_fact:
+        yum_distribution: "el"
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+
+
+    - name:  GITLAB Runner | template rpm repo (1/2)
+      yum_repository:
+        name: runner_gitlab-ci-multi-runner
+        description: runner_gitlab-ci-multi-runner
+        baseurl: "https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ yum_distribution | lower }}/{{ ansible_distribution_major_version }}/$basearch"
+        repo_gpgcheck: no
+        gpgcheck: no
+        enabled: yes
+        gpgkey: "https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey"
+        sslverify: yes
+        sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+        metadata_expire: 300
+        file: runner_gitlab.repo
+      become: yes  
+
+    - name: GITLAB Runner | template rpm source repo (2/2)
+      yum_repository:
+        name: runner_gitlab-ci-multi-runner-source
+        description: runner_gitlab-ci-multi-runner-source
+        baseurl: "https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ yum_distribution | lower }}/{{ ansible_distribution_major_version }}/SRPMS"
+        repo_gpgcheck: no
+        gpgcheck: no        
+        enabled: yes
+        gpgkey: "https://packages.gitlab.com/runner/gitlab-ci-multi-runner/gpgkey"
+        sslverify: yes
+        sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+        metadata_expire: 300
+        file: runner_gitlab.repo
+      become: yes        
 
     - name: GITLAB Runner | Install GitLab Runner
       yum: name=gitlab-ci-multi-runner state=present update_cache=yes
@@ -72,6 +129,7 @@
   ignore_errors: true
   changed_when: False
 
+- debug: var="registered_runners"
 
 - name: GITLAB Runner | Tune config (base)
   lineinfile:
@@ -105,4 +163,5 @@
     --tag-list '{{ gitlab_runner_tags | join(",") }}'
     --executor '{{ gitlab_runner_executor }}'
     --docker-image '{{ gitlab_runner_docker_image }}'
-  when: registered_runners.stderr.find('\n{{ gitlab_runner_description }}') == -1  
+  when: registered_runners.stderr.find('\n'+gitlab_runner_description) == -1 and gitlab_runner_registration_token != ""
+  become: yes  

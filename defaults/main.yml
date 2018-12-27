@@ -17,8 +17,9 @@ gitlab_runner_docker_image: ''
 # Runner tags
 gitlab_runner_tags: []
 
-  config_toml_base_properties:
-    - {regexp: "^concurrent =.*", line: "concurrent = {{ gitlab_runner_concurrent }}"}
+yum_repo_config_url: https://packages.gitlab.com/install/repositories/runner/gitlab-ci-multi-runner/config_file.repo?os={{ ansible_distribution }}&dist={{ ansible_distribution_major_version }}&source=script
 
-  config_toml_extra_properties: []
-#    - {regexp: "^#* *max_connect_errors", line: "max_connect_errors = 4294967295", insertafter: '\[mysqld\]'}
+config_toml_base_properties:
+  - {regexp: "^concurrent =.*", line: "concurrent = {{ gitlab_runner_concurrent }}"}
+
+config_toml_extra_properties: []

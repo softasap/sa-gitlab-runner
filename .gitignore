@@ -3,3 +3,5 @@ box-example/roles
 tempfile
 local*.sh
 .idea
+*.pyc
+**/*/__pycache__

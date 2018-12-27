@@ -1,2 +1,3 @@
 ---
 # tasks file for sa-gitlab-runner
+- include_tasks: tasks_gitlab_runner.yml
