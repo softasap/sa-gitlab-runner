@@ -4,7 +4,7 @@ set -e
 set -o pipefail
 
 REVISION={{ detected_gitlab_version }}
-
+{% raw %}
 if [ "$(id -u)" -ne 0 ]; then
     printf "E: This script requires root privileges.\n" >&2
     exit 1
@@ -91,3 +91,4 @@ docker export gitlab-runner-prebuilt-${REVISION} | XZ_OPT="-v" xz -c > /var/lib/
 docker rm -f gitlab-runner-prebuilt-${REVISION}
 
 clean
+{% endraw %}
