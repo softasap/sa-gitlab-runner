@@ -51,37 +51,6 @@
       tags:
         - gitlab
 
-    - name: GITLAB Runner | Check runner image pregenerated        
-      stat:
-        path: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
-      become: yes  
-      register: gitlabrunnerprebuilt
-    
-    - block:
-       
-        - name: GITLAB Runner | detected version
-          shell: "gitlab-runner --version | grep Version: | awk '{print $2}'"
-          register: detected_gitlab_version_raw
-
-        - name: Set fact
-          set_fact:
-            detected_gitlab_version: "{{ detected_gitlab_version_raw.stdout }}"
-
-        - name: GITLAB Runner | Template mk-prebuilt-images-fix.sh
-          template: src="mk-prebuilt-images-fix.sh" dest="/usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh" mode="u=rwx,g=rx,o=rx"
-          become: yes
-          tags:
-            - gitlab
-
-        - name: GITLAB Runner | Pregenerate images, allow fail (no docker)            
-          shell: /usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh
-          args:
-            chdir: /usr/lib/gitlab-runner/
-            creates: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
-
-      when: gitlabrunnerprebuilt.stat.exists == False
-
-
   when: ansible_os_family == 'Debian'
 
 - block:
@@ -232,3 +201,37 @@
     --docker-image '{{ gitlab_runner_docker_image }}'
   when: registered_runners.stderr.find('\n'+gitlab_runner_description) == -1 and gitlab_runner_registration_token
   become: yes
+
+- block:
+
+    - name: GITLAB Runner | Check runner image pregenerated        
+      stat:
+        path: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
+      become: yes  
+      register: gitlabrunnerprebuilt
+    
+    - block:
+       
+        - name: GITLAB Runner | detected version
+          shell: "gitlab-runner --version | grep Version: | awk '{print $2}'"
+          register: detected_gitlab_version_raw
+
+        - name: Set fact
+          set_fact:
+            detected_gitlab_version: "{{ detected_gitlab_version_raw.stdout }}"
+
+        - name: GITLAB Runner | Template mk-prebuilt-images-fix.sh
+          template: src="mk-prebuilt-images-fix.sh" dest="/usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh" mode="u=rwx,g=rx,o=rx"
+          become: yes
+          tags:
+            - gitlab
+
+        - name: GITLAB Runner | Pregenerate images, allow fail (no docker)            
+          shell: /usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh
+          args:
+            chdir: /usr/lib/gitlab-runner/
+            creates: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
+
+      when: gitlabrunnerprebuilt.stat.exists == False
+
+  when: ansible_os_family == 'Debian' and docker_test is not defined
