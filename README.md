@@ -37,7 +37,9 @@ roles:
          # Default Docker image
          gitlab_runner_docker_image: 'someimage',
          # Runner tags
-         gitlab_runner_tags: ['node', 'ruby', 'mysql']         
+         gitlab_runner_tags: ['node', 'ruby', 'mysql'],
+         
+         gitlab_groups: ['docker']
        }
 ```
 
