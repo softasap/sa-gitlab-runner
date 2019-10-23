@@ -37,7 +37,9 @@ roles:
          # Default Docker image
          gitlab_runner_docker_image: 'someimage',
          # Runner tags
-         gitlab_runner_tags: ['node', 'ruby', 'mysql']         
+         gitlab_runner_tags: ['node', 'ruby', 'mysql'],
+         
+         gitlab_groups: ['docker']
        }
 ```
 
@@ -50,16 +52,16 @@ If you installed the `sa-gitlab-runner` role using the command
 
 
 `
-   ansible-galaxy install softasap.sa-gitlab-runner
+   ansible-galaxy install softasap.sa_gitlab_runner
 `
 
-the role will be available in the folder `library/softasap.sa-gitlab-runner`
+the role will be available in the folder `library/softasap.sa_gitlab_runner`
 Please adjust the path accordingly.
 
 ```YAML
 
      - {
-         role: "softasap.sa-gitlab-runner"
+         role: "softasap.sa_gitlab_runner"
        }
 
 ```
