@@ -39,7 +39,7 @@
           deb-src https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ ansible_distribution | lower }}/
           {{ ansible_distribution_release }} main
         state: present
-        filename: runner_gitlab-runner        
+        filename: runner_gitlab-runner
       become: yes
 
     - name: GITLAB Runner | Install
@@ -188,7 +188,7 @@
   with_items: "{{ gitlab_groups | default([]) }}"
   become: yes
   tags:
-    - gitlab    
+    - gitlab
 
 - name: Register runner to GitLab
   command: gitlab-runner register >
@@ -202,16 +202,27 @@
   when: registered_runners.stderr.find('\n'+gitlab_runner_description) == -1 and gitlab_runner_registration_token
   become: yes
 
+- name: GITLAB Runner | Administrator script to perform re-registration manually
+  template:
+      src: "register_runnersh.j2"
+      dest: "/etc/gitlab-runner/register_runner.sh"
+      mode: "u=rwx,g=rx,o=rx"
+      owner: "root"
+      group: "gitlab-runner"
+  become: yes
+  tags:
+    - gitlab
+
 - block:
 
-    - name: GITLAB Runner | Check runner image pregenerated        
+    - name: GITLAB Runner | Check runner image pregenerated
       stat:
         path: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
-      become: yes  
+      become: yes
       register: gitlabrunnerprebuilt
-    
+
     - block:
-       
+
         - name: GITLAB Runner | detected version
           shell: "gitlab-runner --version | grep Version: | awk '{print $2}'"
           register: detected_gitlab_version_raw
@@ -226,7 +237,7 @@
           tags:
             - gitlab
 
-        - name: GITLAB Runner | Pregenerate images, allow fail (no docker)            
+        - name: GITLAB Runner | Pregenerate images, allow fail (no docker)
           shell: /usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh
           args:
             chdir: /usr/lib/gitlab-runner/

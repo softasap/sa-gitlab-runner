@@ -1,0 +1,17 @@
+#!/bin/bash
+
+export RUNNER_COORDINATOR_URL=${RUNNER_COORDINATOR_URL:-"{{ gitlab_runner_coordinator_url }}"}
+export RUNNER_REGISTRATION_TOKEN=${RUNNER_REGISTRATION_TOKEN}
+export RUNNER_DESCRIPTION="{{ gitlab_runner_description }}"
+export RUNNER_TAG_LIST="{{ gitlab_runner_tags | join(",") }}"
+export RUNNER_EXECUTOR="{{ gitlab_runner_executor }}"
+export RUNNER_DOCKER_IMAGE="{{ gitlab_runner_docker_image }}"
+
+gitlab-runner register \
+    --non-interactive \
+    --url '${GITLAB_COORDINATOR_URL}' \
+    --registration-token '${GITLAB_REGISTRATION_TOKEN}' \
+    --description '${RUNNER_DESCRIPTION}' \
+    --tag-list '${RUNNER_TAG_LIST}' \
+    --executor '${RUNNER_EXECUTOR}' \
+    --docker-image '${RUNNER_DOCKER_IMAGE}'
