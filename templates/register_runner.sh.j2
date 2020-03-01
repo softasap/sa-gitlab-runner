@@ -9,8 +9,8 @@ export RUNNER_DOCKER_IMAGE="{{ gitlab_runner_docker_image }}"
 
 gitlab-runner register \
     --non-interactive \
-    --url '${GITLAB_COORDINATOR_URL}' \
-    --registration-token '${GITLAB_REGISTRATION_TOKEN}' \
+    --url '${RUNNER_COORDINATOR_URL}' \
+    --registration-token '${RUNNER_REGISTRATION_TOKEN}' \
     --description '${RUNNER_DESCRIPTION}' \
     --tag-list '${RUNNER_TAG_LIST}' \
     --executor '${RUNNER_EXECUTOR}' \
