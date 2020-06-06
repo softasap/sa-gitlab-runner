@@ -223,12 +223,14 @@
       owner: "root"
       group: "docker"
   become: yes
+  when: docker_test is not defined
   tags:
     - gitlab
 
 - name: GITLAB Runner | Put overrides for docker service (1/2)
   file: path="/etc/systemd/system/docker.service.d" state="directory"
   become: yes
+  when: docker_test is not defined
   tags:
     - gitlab
 
@@ -237,6 +239,7 @@
       src: "override.conf.j2"
       dest: "/etc/systemd/system/docker.service.d/override.conf"
   become: yes
+  when: docker_test is not defined
   tags:
     - gitlab
 
@@ -246,6 +249,7 @@
     daemon_reload: yes
     name: docker
   become: yes
+  when: docker_test is not defined
   tags:
     - gitlab
 
@@ -255,6 +259,7 @@
     line: "127.0.0.1 docker"
     state: present
   become: yes
+  when: docker_test is not defined
   tags:
     - gitlab
 
