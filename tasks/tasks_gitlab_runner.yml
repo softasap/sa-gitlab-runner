@@ -12,12 +12,13 @@
         - gitlab
 
     - name: GITLAB Runner |  Dependencies
-      apt: name='{{ item }}' state=present
+      apt:
+       name:
+        - apt-transport-https
+       state: present
       retries: 3
       register: result
       until: result is not failed
-      with_items:
-        - apt-transport-https
       become: yes
       tags:
         - gitlab
@@ -39,7 +40,7 @@
           deb-src https://packages.gitlab.com/runner/gitlab-ci-multi-runner/{{ ansible_distribution | lower }}/
           {{ ansible_distribution_release }} main
         state: present
-        filename: runner_gitlab-runner        
+        filename: runner_gitlab-runner
       become: yes
 
     - name: GITLAB Runner | Install
@@ -65,13 +66,14 @@
         - gitlab
 
     - name: GITLAB Runner | Install dependencies
-      yum: name='{{ item }}' state=present
+      yum:
+        name:
+        - pygpgme
+        - yum-utils
+        state: present
       retries: 3
       register: result
       until: result is not failed
-      with_items:
-        - pygpgme
-        - yum-utils
       become: yes
       tags:
         - gitlab
@@ -188,7 +190,7 @@
   with_items: "{{ gitlab_groups | default([]) }}"
   become: yes
   tags:
-    - gitlab    
+    - gitlab
 
 - name: Register runner to GitLab
   command: gitlab-runner register >
@@ -202,16 +204,75 @@
   when: registered_runners.stderr.find('\n'+gitlab_runner_description) == -1 and gitlab_runner_registration_token
   become: yes
 
+- name: GITLAB Runner | Administrator script to perform re-registration manually
+  template:
+      src: "register_runner.sh.j2"
+      dest: "/etc/gitlab-runner/register_runner.sh"
+      mode: "u=rwx,g=rx,o=rx"
+      owner: "root"
+      group: "gitlab-runner"
+  become: yes
+  tags:
+    - gitlab
+
+- name: GITLAB Runner | Reconfigure docker to be compatible with gitlab docker shared executor
+  template:
+      src: "daemon.json.j2"
+      dest: "/etc/docker/daemon.json"
+      mode: "u=rw,g=r,o=r"
+      owner: "root"
+      group: "docker"
+  become: yes
+  when: docker_test is not defined
+  tags:
+    - gitlab
+
+- name: GITLAB Runner | Put overrides for docker service (1/2)
+  file: path="/etc/systemd/system/docker.service.d" state="directory"
+  become: yes
+  when: docker_test is not defined
+  tags:
+    - gitlab
+
+- name: GITLAB Runner | Put overrides for docker service (2/2)
+  template:
+      src: "override.conf.j2"
+      dest: "/etc/systemd/system/docker.service.d/override.conf"
+  become: yes
+  when: docker_test is not defined
+  tags:
+    - gitlab
+
+- name: GITLAB Runner | Restart docker service
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: docker
+  become: yes
+  when: docker_test is not defined
+  tags:
+    - gitlab
+
+- name: GITLAB Runner | Add docker alias for docker host
+  lineinfile:
+    dest: /etc/hosts
+    line: "127.0.0.1 docker"
+    state: present
+  become: yes
+  when: docker_test is not defined
+  tags:
+    - gitlab
+
 - block:
 
-    - name: GITLAB Runner | Check runner image pregenerated        
+    - name: GITLAB Runner | Check runner image pregenerated
       stat:
         path: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
-      become: yes  
+      become: yes
       register: gitlabrunnerprebuilt
-    
+
     - block:
-       
+
         - name: GITLAB Runner | detected version
           shell: "gitlab-runner --version | grep Version: | awk '{print $2}'"
           register: detected_gitlab_version_raw
@@ -220,17 +281,27 @@
           set_fact:
             detected_gitlab_version: "{{ detected_gitlab_version_raw.stdout }}"
 
+        - name: GITLAB RUnner | Ensure directory exists
+          file: path="/usr/lib/gitlab-runner" state=directory
+          become: yes
+          tags:
+            - gitlab
+
         - name: GITLAB Runner | Template mk-prebuilt-images-fix.sh
           template: src="mk-prebuilt-images-fix.sh" dest="/usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh" mode="u=rwx,g=rx,o=rx"
           become: yes
           tags:
             - gitlab
 
-        - name: GITLAB Runner | Pregenerate images, allow fail (no docker)            
+        - name: GITLAB Runner | Pregenerate images, allow fail (no docker)
           shell: /usr/lib/gitlab-runner/mk-prebuilt-images-fix.sh
           args:
             chdir: /usr/lib/gitlab-runner/
             creates: /var/lib/gitlab-runner/gitlab-runner-prebuilt.tar.xz
+          become: yes
+          ignore_errors: true
+          tags:
+            - gitlab
 
       when: gitlabrunnerprebuilt.stat.exists == False
 
